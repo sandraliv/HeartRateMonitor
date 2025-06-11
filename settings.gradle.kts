@@ -16,9 +16,16 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+            credentials {
+                username = providers.gradleProperty("jitpack.io.username").getOrElse("")
+                password = providers.gradleProperty("jitpack.io.password").getOrElse("")
+            }
+        }
     }
 }
 
+
 rootProject.name = "HeartRateMonitor"
 include(":app")
- 

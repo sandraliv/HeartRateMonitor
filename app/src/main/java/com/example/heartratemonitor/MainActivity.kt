@@ -3,11 +3,8 @@ package com.example.heartratemonitor
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -16,7 +13,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.heartratemonitor.bluetooth.BluetoothClient
 import com.example.heartratemonitor.bluetooth.BluetoothHandler
+import com.example.heartratemonitor.classes.CustomMarkerView
 import com.example.heartratemonitor.databinding.ActivityMainBinding
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -26,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var bluetoothHandler: BluetoothHandler
     @Inject lateinit var bluetoothClient: BluetoothClient
     private lateinit var binding: ActivityMainBinding
+    private val heartRateValues = mutableListOf<Float>()
 
     private val targetDeviceName = "HRSTM"
 
@@ -58,7 +61,33 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         requestBluetoothPermissions()
+
     }
+
+    private fun updateChart(lineChart: LineChart, values: List<Float>) {
+        val entries = values.mapIndexed { index, bpm ->
+            Entry(index.toFloat(), bpm)
+        }
+
+        val marker = CustomMarkerView(this, R.layout.marker_view)
+        binding.chart1.marker = marker
+
+
+        val dataSet = LineDataSet(entries, "Heart Rate")
+        dataSet.color = Color.RED
+        dataSet.valueTextColor = Color.BLACK
+        dataSet.lineWidth = 2f
+        dataSet.setDrawCircles(true)
+        dataSet.setDrawValues(true)
+        dataSet.setDrawHighlightIndicators(true)
+        dataSet.highLightColor = Color.BLUE
+
+        val lineData = LineData(dataSet)
+        lineChart.data = lineData
+        lineChart.invalidate()
+    }
+
+
 
     private fun requestBluetoothPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -105,6 +134,16 @@ class MainActivity : AppCompatActivity() {
                     },
                     onDataReceived = { data ->
                         Log.d("MainActivity", "Data received: $data")
+                        binding.HeartRateValue.text = data;
+                        if(heartRateValues.size < 20) {
+                            val bpm = data.toFloatOrNull()
+                            if (bpm != null) {
+                                heartRateValues.add(bpm)
+                            };
+                        }
+                        if (heartRateValues.size == 20) {
+                            updateChart(binding.chart1, heartRateValues)  // Update chart just once
+                        }
                     },
                     onError = { error ->
                         Log.e("MainActivity", "Connection error", error)
